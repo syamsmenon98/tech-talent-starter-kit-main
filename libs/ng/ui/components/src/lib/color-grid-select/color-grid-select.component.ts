@@ -25,6 +25,7 @@ import {
   ColorGridItemComponent,
   ColorGridSelect,
   COLOR_GRID_SELECT,
+  ColorGridDto,
 } from './item';
 import { FocusKeyManager } from '@angular/cdk/a11y';
 import {
@@ -68,6 +69,7 @@ import { Subject, takeUntil } from 'rxjs';
     },
   ],
 })
+
 export class ColorGridSelectComponent
   implements ControlValueAccessor, ColorGridSelect, AfterViewInit, OnDestroy
 {
@@ -85,18 +87,20 @@ export class ColorGridSelectComponent
 
   private readonly _itemsPerRow = signal(5);
 
+  private readonly _itemsPerColumn = signal(0);
+
  private _componentWidth=0;
 
 
   private _keyManager!: FocusKeyManager<ColorGridItemComponent>;
 
-  private _value?: string | null | undefined = COLOR_GRID_ITEMS[0];
+  private _value?: ColorGridDto | null | undefined = COLOR_GRID_ITEMS[0];
 
   private _disabled = false;
   private _touched = false;
 
   private _onTouched = (): void => void 0;
-  private _onChange = (val?: string | null): void => void 0;
+  private _onChange = (val?: ColorGridDto | null): void => void 0;
 
   @HostBinding('attr.tabindex')
   private get _tabIndex() {
@@ -148,11 +152,20 @@ export class ColorGridSelectComponent
   }
 
   @Input()
-  public get value(): string | null | undefined {
+  public get itemsPerColumn(): number {
+    return this._itemsPerColumn();
+  }
+
+  public set itemsPerColumn(value: number) {
+    this._itemsPerColumn.set(value);
+  }
+
+  @Input()
+  public get value(): ColorGridDto | null | undefined {
     return this._value;
   }
 
-  public set value(value: string | null | undefined) {
+  public set value(value: ColorGridDto | null | undefined) {
     this._value = value;
     // this._updateKeyManagerActiveItem();
   }
@@ -161,10 +174,10 @@ export class ColorGridSelectComponent
   public disabled = false;
 
   @Output()
-  public readonly valueChange = new EventEmitter<string | null | undefined>();
+  public readonly valueChange = new EventEmitter<ColorGridDto | null | undefined>();
 
   /** @todo logic to generate a grid of colors to allow navigation */
-  public readonly grid = computed((): string[][] => {
+  public readonly grid = computed((): ColorGridDto[][] => {
     // Calculate the number of items that can be added per row
     // The calculation will be based on the available width of the element width and itemSize
     //   this._itemsPerRow = ...
@@ -188,6 +201,7 @@ export class ColorGridSelectComponent
     }
   
     this._itemsPerRow.set(Math.floor(this.componentWidth / itemSize));
+    this._itemsPerColumn.set(Math.ceil(this._items().length / this._itemsPerRow()));
   }
 
   public get keyMan() {
@@ -195,11 +209,11 @@ export class ColorGridSelectComponent
   }
 
   // ControlValueAccessor
-  public writeValue(val: string): void {
+  public writeValue(val: ColorGridDto): void {
     this.value = val;
   }
 
-  public registerOnChange(onChange: (val?: string | null) => void): void {
+  public registerOnChange(onChange: (val?: ColorGridDto | null) => void): void {
     this._onChange = onChange;
   }
 
@@ -220,7 +234,7 @@ export class ColorGridSelectComponent
     }
   }
 
-  public emitChange(value?: string | null | undefined) {
+  public emitChange(value?: ColorGridDto | null | undefined) {
     this.markAsTouched();
 
     if (!this._disabled) {
@@ -301,7 +315,8 @@ export class ColorGridSelectComponent
       case RIGHT_ARROW: {
         // add logic
         // ....
-
+       // const itemsPerColumn = Math.ceil(this._items().length / this._itemsPerRow);    
+      console.log(this.itemsPerColumn)
         this._keyManager.onKeydown(event); // @fixme remove the following after the grid logic is implemented
         break;
       }

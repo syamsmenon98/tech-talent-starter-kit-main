@@ -15,39 +15,44 @@ import { CommonModule } from '@angular/common';
 
 import { FocusableOption, Highlightable } from '@angular/cdk/a11y';
 
-export const COLOR_GRID_ITEMS = [
-  'rgb(255, 0, 0)', // Red
-  'rgb(0, 255, 0)', // Lime
-  'rgb(0, 0, 255)', // Blue
-  'rgb(255, 255, 0)', // Yellow
-  'rgb(0, 255, 255)', // Cyan
-  'rgb(255, 0, 255)', // Magenta
-  'rgb(192, 192, 192)', // Silver
-  'rgb(128, 128, 128)', // Gray
-  'rgb(128, 0, 0)', // Maroon
-  'rgb(128, 128, 0)', // Olive
-  'rgb(0, 128, 0)', // Green
-  'rgb(128, 0, 128)', // Purple
-  'rgb(0, 128, 128)', // Teal
-  'rgb(0, 0, 128)', // Navy
-  'rgb(255, 165, 0)', // Orange
-  'rgb(255, 105, 180)', // Hot Pink
-  'rgb(75, 0, 130)', // Indigo
-  'rgb(240, 128, 128)', // Light Coral
-  'rgb(32, 178, 170)', // Light Sea Green
-  'rgb(255, 222, 173)', // Navajo White
+export interface ColorGridDto {
+  name: string;
+  code: string;
+}
+
+export const COLOR_GRID_ITEMS: ColorGridDto[] = [
+  { name: 'Red', code: 'rgb(255, 0, 0)' },
+  { name: 'Lime', code: 'rgb(0, 255, 0)' },
+  { name: 'Blue', code: 'rgb(0, 0, 255)' },
+  { name: 'Yellow', code: 'rgb(255, 255, 0)' },
+  { name: 'Cyan', code: 'rgb(0, 255, 255)' },
+  { name: 'Magenta', code: 'rgb(255, 0, 255)' },
+  { name: 'Silver', code: 'rgb(192, 192, 192)' },
+  { name: 'Gray', code: 'rgb(128, 128, 128)' },
+  { name: 'Maroon', code: 'rgb(128, 0, 0)' },
+  { name: 'Olive', code: 'rgb(128, 128, 0)' },
+  { name: 'Green', code: 'rgb(0, 128, 0)' },
+  { name: 'Purple', code: 'rgb(128, 0, 128)' },
+  { name: 'Teal', code: 'rgb(0, 128, 128)' },
+  { name: 'Navy', code: 'rgb(0, 0, 128)' },
+  { name: 'Orange', code: 'rgb(255, 165, 0)' },
+  { name: 'Hot Pink', code: 'rgb(255, 105, 180)' },
+  { name: 'Indigo', code: 'rgb(75, 0, 130)' },
+  { name: 'Light Coral', code: 'rgb(240, 128, 128)' },
+  { name: 'Light Sea Green', code: 'rgb(32, 178, 170)' },
+  { name: 'Navajo White', code: 'rgb(255, 222, 173)' },
 ];
 
 export const COLOR_GRID_ITEM_SIZES = ['small', 'medium', 'large'] as const;
 
-export const getContrastColor = (color: Color | string) =>
-  Color(color).isDark() ? 'rgb(255,255,255)' : 'rgb(0,0,0)';
+export const getContrastColor = (color:  ColorGridDto) =>
+  Color(color.code).isDark() ? 'rgb(255,255,255)' : 'rgb(0,0,0)';
 
 export type ColorGridItemSize = (typeof COLOR_GRID_ITEM_SIZES)[number];
 
 export type ColorGridSelect = {
-  value?: string | null;
-  emitChange: (value?: string | null) => void;
+  value?: ColorGridDto | null;
+  emitChange: (value?: ColorGridDto | null) => void;
 };
 /**
  * Injection token that can be used to inject instances of `ColorGridSelectComponent`. It serves as
@@ -74,7 +79,7 @@ export class ColorGridItemComponent implements Highlightable, FocusableOption {
   /** Whether this item is disabled. */
   private _disabled = false;
 
-  private _value?: string;
+  private _value?: ColorGridDto;
 
   private readonly _colorGridSelect = inject(COLOR_GRID_SELECT, {
     optional: true,

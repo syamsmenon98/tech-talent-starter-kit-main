@@ -1,13 +1,13 @@
 <div class="container mx-auto">
-  <form [formGroup]="form">
+  <form [formGroup]="form" (ngSubmit)="onFormSubmit()">
     <mat-form-field class="my-4 w-full">
       <input matInput formControlName="search" type="search" />
     </mat-form-field>
 
-    <brew-color-grid-select formControlName="color" />
+    <brew-color-grid-select [value]="form.get('color')?.value" formControlName="color"/>
 
     <div class="flex justify-end">
-      <button mat-raised-button type="submit">Submit</button>
+      <button mat-raised-button [disabled]="!form.get('search')?.value"  type="submit">Submit</button>
     </div>
   </form>
 
