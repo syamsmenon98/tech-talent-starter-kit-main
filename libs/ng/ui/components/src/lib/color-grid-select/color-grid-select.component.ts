@@ -69,7 +69,6 @@ import { Subject, takeUntil } from 'rxjs';
     },
   ],
 })
-
 export class ColorGridSelectComponent
   implements ControlValueAccessor, ColorGridSelect, AfterViewInit, OnDestroy
 {
@@ -89,8 +88,7 @@ export class ColorGridSelectComponent
 
   private readonly _itemsPerColumn = signal(0);
 
- private _componentWidth=0;
-
+  private _componentWidth = 0;
 
   private _keyManager!: FocusKeyManager<ColorGridItemComponent>;
 
@@ -174,7 +172,9 @@ export class ColorGridSelectComponent
   public disabled = false;
 
   @Output()
-  public readonly valueChange = new EventEmitter<ColorGridDto | null | undefined>();
+  public readonly valueChange = new EventEmitter<
+    ColorGridDto | null | undefined
+  >();
 
   /** @todo logic to generate a grid of colors to allow navigation */
   public readonly grid = computed((): ColorGridDto[][] => {
@@ -188,20 +188,22 @@ export class ColorGridSelectComponent
 
   updateGridRowWidth(): void {
     let itemSize: number;
-  
+
     if (this.componentWidth < 768) {
       itemSize = 32;
-      this._itemSize.set("small");
+      this._itemSize.set('small');
     } else if (this.componentWidth < 1024) {
       itemSize = 64;
-      this._itemSize.set("medium");
+      this._itemSize.set('medium');
     } else {
       itemSize = 80;
-      this._itemSize.set("large");
+      this._itemSize.set('large');
     }
-  
+
     this._itemsPerRow.set(Math.floor(this.componentWidth / itemSize));
-    this._itemsPerColumn.set(Math.ceil(this._items().length / this._itemsPerRow()));
+    this._itemsPerColumn.set(
+      Math.ceil(this._items().length / this._itemsPerRow())
+    );
   }
 
   public get keyMan() {
@@ -245,8 +247,7 @@ export class ColorGridSelectComponent
   }
 
   public ngAfterViewInit() {
-    this.calculateComponentWidth()
-    
+    this.calculateComponentWidth();
     this._keyManager = new FocusKeyManager(this.colorItems)
       .withHomeAndEnd()
       .withHorizontalOrientation('ltr')
@@ -276,6 +277,14 @@ export class ColorGridSelectComponent
       this._el.nativeElement.addEventListener('focusin', this._handleFocusin);
       this._el.nativeElement.addEventListener('focusout', this._handleFocusout);
     });
+    this._focusOnFirstItem();
+  }
+
+  private _focusOnFirstItem() {
+    const firstItem = this.colorItems.first;
+    if (firstItem) {
+      firstItem.focus();
+    }
   }
 
   public ngOnDestroy() {
@@ -292,7 +301,7 @@ export class ColorGridSelectComponent
 
   private calculateComponentWidth() {
     this.componentWidth = this._el.nativeElement.offsetWidth;
-    this.updateGridRowWidth()
+    this.updateGridRowWidth();
   }
 
   //listen for window resize --
@@ -308,18 +317,65 @@ export class ColorGridSelectComponent
    */
   @HostListener('keydown', ['$event'])
   private _onKeydown(event: KeyboardEvent) {
+    const currentIndex = this._keyManager.activeItemIndex;
+    if (!currentIndex) {
+      this._keyManager.setActiveItem(1);
+      return;
+    }
     switch (event.keyCode) {
-      case UP_ARROW:
-      case DOWN_ARROW:
-      case LEFT_ARROW:
-      case RIGHT_ARROW: {
-        // add logic
-        // ....
-       // const itemsPerColumn = Math.ceil(this._items().length / this._itemsPerRow);    
-      console.log(this.itemsPerColumn)
-        this._keyManager.onKeydown(event); // @fixme remove the following after the grid logic is implemented
+      case UP_ARROW: {
+        this.moveUpKey(currentIndex);
         break;
       }
+      case DOWN_ARROW: {
+        this.moveDownKey(currentIndex);
+        break;
+      }
+      case LEFT_ARROW: {
+        this.moveLeftKey(currentIndex);
+        break;
+      }
+      case RIGHT_ARROW: {
+        this.moveRightKey(currentIndex);
+        break;
+      }
+      default:
+        this._keyManager.onKeydown(event);
+        break;
+    }
+  }
+
+  private moveUpKey(key: number) {
+    const currentRow = Math.floor(key / this.itemsPerRow);
+    const newRow = currentRow - 1;
+
+    if (newRow >= 0) {
+      const newIndex = newRow * this.itemsPerRow + (key % this.itemsPerRow);
+      this._keyManager.setActiveItem(newIndex);
+    }
+  }
+
+  private moveDownKey(key: number) {
+    const currentRow = Math.floor(key / this.itemsPerRow);
+    const newRow = currentRow + 1;
+
+    if (newRow < this.itemsPerColumn) {
+      const newIndex = newRow * this.itemsPerRow + (key % this.itemsPerRow);
+      this._keyManager.setActiveItem(newIndex);
+    }
+  }
+
+  private moveLeftKey(key: number) {
+    const newIndex = key - 1;
+    if (newIndex >= 0) {
+      this._keyManager.setActiveItem(newIndex);
+    }
+  }
+
+  private moveRightKey(key: number) {
+    const newIndex = key + 1;
+    if (newIndex < this._items().length) {
+      this._keyManager.setActiveItem(newIndex);
     }
   }
 
