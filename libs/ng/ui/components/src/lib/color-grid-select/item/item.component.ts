@@ -14,6 +14,7 @@ import {
 import { CommonModule } from '@angular/common';
 
 import { FocusableOption, Highlightable } from '@angular/cdk/a11y';
+import { C } from '@angular/cdk/keycodes';
 
 export interface ColorGridDto {
   name: string;
@@ -43,12 +44,16 @@ export const COLOR_GRID_ITEMS: ColorGridDto[] = [
   { name: 'Navajo White', code: 'rgb(255, 222, 173)' },
 ];
 
-export const COLOR_GRID_ITEM_SIZES = ['small', 'medium', 'large'] as const;
+export const COLOR_GRID_ITEM_SIZES = {
+  small: 32,
+  medium: 64,
+  large: 80
+} as const;
 
 export const getContrastColor = (color:  ColorGridDto) =>
   Color(color.code).isDark() ? 'rgb(255,255,255)' : 'rgb(0,0,0)';
 
-export type ColorGridItemSize = (typeof COLOR_GRID_ITEM_SIZES)[number];
+export type ColorGridItemSize = (typeof COLOR_GRID_ITEM_SIZES)[keyof typeof COLOR_GRID_ITEM_SIZES];
 
 export type ColorGridSelect = {
   value?: ColorGridDto | null;
@@ -112,7 +117,7 @@ export class ColorGridItemComponent implements Highlightable, FocusableOption {
   }
 
   @Input()
-  public size: ColorGridItemSize = COLOR_GRID_ITEM_SIZES[0];
+  public size: ColorGridItemSize = COLOR_GRID_ITEM_SIZES.small;
 
   @HostBinding('attr.aria-selected')
   @Input({ transform: booleanAttribute })

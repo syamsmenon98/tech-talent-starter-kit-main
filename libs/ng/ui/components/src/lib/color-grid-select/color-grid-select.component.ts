@@ -1,6 +1,7 @@
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   ElementRef,
   EventEmitter,
@@ -72,12 +73,13 @@ import { Subject, takeUntil } from 'rxjs';
 export class ColorGridSelectComponent
   implements ControlValueAccessor, ColorGridSelect, AfterViewInit, OnDestroy
 {
+  constructor(private detechChanges: ChangeDetectorRef) {}
   /** Emits when the list has been destroyed. */
   private readonly _destroyed = new Subject<void>();
 
   private readonly _items = signal(COLOR_GRID_ITEMS);
   private readonly _itemSize = signal<ColorGridItemSize>(
-    COLOR_GRID_ITEM_SIZES[0]
+    COLOR_GRID_ITEM_SIZES.small
   );
 
   private readonly _el = inject(ElementRef<ColorGridSelectComponent>);
@@ -86,7 +88,7 @@ export class ColorGridSelectComponent
 
   private readonly _itemsPerRow = signal(5);
 
-  private readonly _itemsPerColumn = signal(0);
+  private resizeObserver: ResizeObserver | null = null;
 
   private _componentWidth = 0;
 
@@ -150,15 +152,6 @@ export class ColorGridSelectComponent
   }
 
   @Input()
-  public get itemsPerColumn(): number {
-    return this._itemsPerColumn();
-  }
-
-  public set itemsPerColumn(value: number) {
-    this._itemsPerColumn.set(value);
-  }
-
-  @Input()
   public get value(): ColorGridDto | null | undefined {
     return this._value;
   }
@@ -187,23 +180,7 @@ export class ColorGridSelectComponent
   });
 
   updateGridRowWidth(): void {
-    let itemSize: number;
-
-    if (this.componentWidth < 768) {
-      itemSize = 32;
-      this._itemSize.set('small');
-    } else if (this.componentWidth < 1024) {
-      itemSize = 64;
-      this._itemSize.set('medium');
-    } else {
-      itemSize = 80;
-      this._itemSize.set('large');
-    }
-
-    this._itemsPerRow.set(Math.floor(this.componentWidth / itemSize));
-    this._itemsPerColumn.set(
-      Math.ceil(this._items().length / this._itemsPerRow())
-    );
+    this.itemsPerRow = Math.floor(this.componentWidth / this.itemSize);
   }
 
   public get keyMan() {
@@ -213,6 +190,7 @@ export class ColorGridSelectComponent
   // ControlValueAccessor
   public writeValue(val: ColorGridDto): void {
     this.value = val;
+    this.detechChanges.markForCheck();
   }
 
   public registerOnChange(onChange: (val?: ColorGridDto | null) => void): void {
@@ -247,7 +225,19 @@ export class ColorGridSelectComponent
   }
 
   public ngAfterViewInit() {
-    this.calculateComponentWidth();
+    this.resizeObserver = new ResizeObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.contentRect.width || entry.contentRect.height) {
+          this._ngZone.run(() => {
+            this.calculateComponentWidth();
+          });
+        }
+      });
+    });
+    this.resizeObserver.observe(
+      this._el.nativeElement.querySelector('.grid-row')
+    );
+
     this._keyManager = new FocusKeyManager(this.colorItems)
       .withHomeAndEnd()
       .withHorizontalOrientation('ltr')
@@ -280,7 +270,7 @@ export class ColorGridSelectComponent
     this._focusOnFirstItem();
   }
 
-  private _focusOnFirstItem() {
+  private _focusOnFirstItem(): void {
     const firstItem = this.colorItems.first;
     if (firstItem) {
       firstItem.focus();
@@ -297,17 +287,14 @@ export class ColorGridSelectComponent
 
     this._destroyed.next();
     this._destroyed.complete();
+    this.resizeObserver?.unobserve(
+      this._el.nativeElement.querySelector('.grid-row')
+    );
   }
 
   private calculateComponentWidth() {
     this.componentWidth = this._el.nativeElement.offsetWidth;
     this.updateGridRowWidth();
-  }
-
-  //listen for window resize --
-  @HostListener('window:resize', ['$event'])
-  onResize() {
-    this.calculateComponentWidth();
   }
 
   /**
@@ -318,10 +305,11 @@ export class ColorGridSelectComponent
   @HostListener('keydown', ['$event'])
   private _onKeydown(event: KeyboardEvent) {
     const currentIndex = this._keyManager.activeItemIndex;
-    if (!currentIndex) {
-      this._keyManager.setActiveItem(1);
+    if (currentIndex == null) {
+      this._keyManager.setActiveItem(0);
       return;
     }
+
     switch (event.keyCode) {
       case UP_ARROW: {
         this.moveUpKey(currentIndex);
@@ -331,12 +319,10 @@ export class ColorGridSelectComponent
         this.moveDownKey(currentIndex);
         break;
       }
-      case LEFT_ARROW: {
-        this.moveLeftKey(currentIndex);
-        break;
-      }
+      case LEFT_ARROW:
       case RIGHT_ARROW: {
-        this.moveRightKey(currentIndex);
+        const direction = event.keyCode === LEFT_ARROW ? -1 : 1;
+        this.moveKey(currentIndex, direction);
         break;
       }
       default:
@@ -352,31 +338,40 @@ export class ColorGridSelectComponent
     if (newRow >= 0) {
       const newIndex = newRow * this.itemsPerRow + (key % this.itemsPerRow);
       this._keyManager.setActiveItem(newIndex);
+    } else {
+      const lastRow = Math.floor((this.items.length - 1) / this.itemsPerRow);
+      const newIndexInLastRow =
+        lastRow * this.itemsPerRow + (key % this.itemsPerRow);
+      if(newIndexInLastRow>this.items.length-1){
+          return this._keyManager.setActiveItem(this.items.length-1);
+       }
+      this._keyManager.setActiveItem(newIndexInLastRow);
     }
   }
 
   private moveDownKey(key: number) {
     const currentRow = Math.floor(key / this.itemsPerRow);
     const newRow = currentRow + 1;
+    const totalRows = Math.ceil(this.items.length / this.itemsPerRow);
 
-    if (newRow < this.itemsPerColumn) {
+    if (newRow < totalRows) {
       const newIndex = newRow * this.itemsPerRow + (key % this.itemsPerRow);
+
+      if(newIndex>this.items.length-1){
+         return this._keyManager.setActiveItem(this.items.length-1);
+      }
+
+      this._keyManager.setActiveItem(newIndex);
+
+    } else {
+      const newIndex = key % this.itemsPerRow;
       this._keyManager.setActiveItem(newIndex);
     }
   }
 
-  private moveLeftKey(key: number) {
-    const newIndex = key - 1;
-    if (newIndex >= 0) {
-      this._keyManager.setActiveItem(newIndex);
-    }
-  }
-
-  private moveRightKey(key: number) {
-    const newIndex = key + 1;
-    if (newIndex < this._items().length) {
-      this._keyManager.setActiveItem(newIndex);
-    }
+  private moveKey(key: number, direction: number) {
+    const newIndex = (key + direction + this.items.length) % this.items.length;
+    this._keyManager.setActiveItem(newIndex);
   }
 
   /** Handles focusout events within the list. */

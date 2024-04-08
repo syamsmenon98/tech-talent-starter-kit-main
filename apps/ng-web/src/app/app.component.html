@@ -4,7 +4,7 @@
       <input matInput formControlName="search" type="search" />
     </mat-form-field>
 
-    <brew-color-grid-select [value]="form.get('color')?.value" formControlName="color"/>
+    <brew-color-grid-select formControlName="color"/>
 
     <div class="flex justify-end">
       <button mat-raised-button [disabled]="!form.get('search')?.value"  type="submit">Submit</button>
